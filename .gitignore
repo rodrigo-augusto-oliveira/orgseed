@@ -1,0 +1,5 @@
+node_modules/
+dist/
+config.json
+sf-graph-copy-*.json
+.DS_Store

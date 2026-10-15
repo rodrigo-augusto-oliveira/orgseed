@@ -1,0 +1,54 @@
+{
+  "name": "sf-graph-copy",
+  "productName": "SF Graph Copy",
+  "version": "1.0.0",
+  "description": "Copia registros (pais e filhos) entre orgs Salesforce usando a Composite Graph API",
+  "main": "app/main.js",
+  "private": true,
+  "license": "UNLICENSED",
+  "author": "Equipe Salesforce",
+  "scripts": {
+    "start": "electron .",
+    "test": "node test/engine.test.js && node test/match.test.js && node test/update.test.js && node test/metadata.test.js && node test/auth.test.js",
+    "cli": "node cli.js",
+    "dist": "electron-builder --publish never",
+    "dist:win": "electron-builder --win --publish never",
+    "dist:mac": "electron-builder --mac --publish never",
+    "dist:linux": "electron-builder --linux --publish never"
+  },
+  "devDependencies": {
+    "electron": "^39.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "interno.sfgraphcopy",
+    "productName": "SF Graph Copy",
+    "artifactName": "SF-Graph-Copy-${version}-${os}-${arch}.${ext}",
+    "directories": { "output": "dist" },
+    "files": ["app/**", "engine/**", "package.json"],
+    "mac": {
+      "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }],
+      "category": "public.app-category.developer-tools",
+      "identity": "-",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
+    },
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "portable": { "artifactName": "SF-Graph-Copy-${version}-portable.${ext}" },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Development",
+      "maintainer": "Equipe Salesforce <sf-graph-copy@empresa.local>"
+    }
+  }
+}

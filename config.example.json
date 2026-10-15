@@ -1,0 +1,53 @@
+{
+  "source": "prod",
+  "target": "dev-sandbox",
+  "apiVersion": "61.0",
+
+  "root": {
+    "sobject": "Opportunity",
+    "ids": ["006XXXXXXXXXXXXXXX"],
+    "where": "",
+    "limit": 20
+  },
+
+  "children": {
+    "Opportunity": ["OpportunityLineItems", "OpportunityContactRoles"]
+  },
+
+  "copyObjects": [
+    "Account",
+    "Contact",
+    "Opportunity",
+    "OpportunityLineItem",
+    "OpportunityContactRole",
+    "Pricebook2",
+    "PricebookEntry",
+    "Product2"
+  ],
+
+  "maxParentDepth": 3,
+  "reuseExisting": true,
+  "skipAlreadyCopied": true,
+  "updateExisting": true,
+  "autoExternalId": true,
+  "maxGraphNodes": 500,
+
+  "matchBy": {
+    "Account": ["Name"],
+    "Contact": ["Email"],
+    "Product2": ["ProductCode"],
+    "Pricebook2": ["Name"],
+    "PricebookEntry": ["Pricebook2Id", "Product2Id", "CurrencyIsoCode?"]
+  },
+
+  "linkOnly": {
+    "User": ["Email"]
+  },
+
+  "sourceIdField": {},
+
+  "skipFields": {
+    "*": ["OwnerId"],
+    "Account": ["ParentId"]
+  }
+}
