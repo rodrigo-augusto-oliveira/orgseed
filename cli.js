@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Linha de comando do sf-graph-copy (mesmo motor da interface).
+ * Linha de comando do OrgSeed (mesmo motor da interface).
  *
  *   node cli.js --config config.json [--dry-run] [--ids 006xx,006yy] [--where "..."]
  */

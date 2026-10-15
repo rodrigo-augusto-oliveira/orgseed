@@ -24,7 +24,7 @@ function createWindow() {
     height: 880,
     minWidth: 1000,
     minHeight: 640,
-    title: 'SF Graph Copy',
+    title: 'OrgSeed',
     show: false,
     autoHideMenuBar: true,
     webPreferences: {
@@ -212,7 +212,22 @@ handle('log:show', async (file) => { if (file && fs.existsSync(file)) shell.show
 handle('logs:open', async () => { fs.mkdirSync(logsDir(), { recursive: true }); await shell.openPath(logsDir()); return true; });
 
 // ---------------------------------------------------------------- ciclo de vida
+// Até a versão 1.0.0 o app se chamava "SF Graph Copy" e guardava os dados em outra pasta.
+// Copia (sem apagar a original) o que ainda não existir na pasta nova.
+function migrateLegacyData() {
+  const oldDir = path.join(app.getPath('appData'), 'SF Graph Copy');
+  if (oldDir === dataDir() || !fs.existsSync(oldDir)) return;
+  for (const item of ['perfis', 'logs', 'metadados', 'settings.json', 'Local Storage']) {
+    const from = path.join(oldDir, item);
+    const to = path.join(dataDir(), item);
+    try {
+      if (fs.existsSync(from) && !fs.existsSync(to)) fs.cpSync(from, to, { recursive: true });
+    } catch (e) { console.error(`Não foi possível migrar ${item}:`, e.message); }
+  }
+}
+
 app.whenReady().then(() => {
+  migrateLegacyData();
   engine.sf.setSfPath(loadSettings().sfPath);
   buildMenu();
   createWindow();

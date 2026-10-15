@@ -139,7 +139,7 @@ async function transfer(opts) {
   fs.mkdirSync(path.join(workDir, 'force-app'), { recursive: true });
   fs.writeFileSync(path.join(workDir, 'sfdx-project.json'), JSON.stringify({
     packageDirectories: [{ path: 'force-app', default: true }],
-    name: 'sf-graph-copy-metadata',
+    name: 'orgseed-metadata',
     sourceApiVersion: apiVersion,
   }, null, 2));
   fs.writeFileSync(path.join(workDir, 'package.xml'), buildPackageXml(members, apiVersion));

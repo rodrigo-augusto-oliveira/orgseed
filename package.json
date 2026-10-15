@@ -1,8 +1,8 @@
 {
-  "name": "sf-graph-copy",
-  "productName": "SF Graph Copy",
-  "version": "1.0.0",
-  "description": "Copia registros (pais e filhos) entre orgs Salesforce usando a Composite Graph API",
+  "name": "orgseed",
+  "productName": "OrgSeed",
+  "version": "1.1.0",
+  "description": "Popula sandboxes Salesforce copiando registros (com pais e filhos) e metadados entre orgs",
   "main": "app/main.js",
   "private": true,
   "license": "UNLICENSED",
@@ -21,9 +21,9 @@
     "electron-builder": "^26.0.12"
   },
   "build": {
-    "appId": "interno.sfgraphcopy",
-    "productName": "SF Graph Copy",
-    "artifactName": "SF-Graph-Copy-${version}-${os}-${arch}.${ext}",
+    "appId": "interno.orgseed",
+    "productName": "OrgSeed",
+    "artifactName": "OrgSeed-${version}-${os}-${arch}.${ext}",
     "directories": { "output": "dist" },
     "files": ["app/**", "engine/**", "package.json"],
     "mac": {
@@ -39,7 +39,7 @@
         { "target": "portable", "arch": ["x64"] }
       ]
     },
-    "portable": { "artifactName": "SF-Graph-Copy-${version}-portable.${ext}" },
+    "portable": { "artifactName": "OrgSeed-${version}-portable.${ext}" },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
@@ -48,7 +48,7 @@
     "linux": {
       "target": ["AppImage", "deb"],
       "category": "Development",
-      "maintainer": "Equipe Salesforce <sf-graph-copy@empresa.local>"
+      "maintainer": "Equipe Salesforce <orgseed@empresa.local>"
     }
   }
 }

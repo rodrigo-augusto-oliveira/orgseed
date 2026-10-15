@@ -1,6 +1,6 @@
 'use strict';
 /**
- * Motor do sf-graph-copy: coleta registros raiz, filhos e pais na org de origem
+ * Motor do OrgSeed: coleta registros raiz, filhos e pais na org de origem
  * e recria tudo na org de destino via Composite Graph API.
  *
  * Usado pela interface (Electron) e pela linha de comando (cli.js).
@@ -97,7 +97,7 @@ function extIdConflict(data, row, extIds) {
 function loadCopyHistory(logDir, source, target) {
   const out = new Map();
   if (!logDir || !fs.existsSync(logDir)) return out;
-  const files = fs.readdirSync(logDir).filter((f) => /^sf-graph-copy-.*\.json$/.test(f) && !f.includes('simulacao'));
+  const files = fs.readdirSync(logDir).filter((f) => /^(orgseed|sf-graph-copy)-.*\.json$/.test(f) && !f.includes('simulacao'));
   for (const f of files) {
     let log;
     try { log = JSON.parse(fs.readFileSync(path.join(logDir, f), 'utf8')); } catch { continue; }
@@ -1275,7 +1275,7 @@ async function run(cfgIn, opts = {}) {
   if (opts.logDir) {
     fs.mkdirSync(opts.logDir, { recursive: true });
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-    logFile = path.join(opts.logDir, `sf-graph-copy-${DRY ? 'simulacao-' : ''}${stamp}.json`);
+    logFile = path.join(opts.logDir, `orgseed-${DRY ? 'simulacao-' : ''}${stamp}.json`);
     fs.writeFileSync(logFile, JSON.stringify(fullLog, null, 2));
   }
 
