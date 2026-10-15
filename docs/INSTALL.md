@@ -75,4 +75,4 @@ The app's interface is in Portuguese; labels below are shown as they appear on s
 
 ## Upgrading from SF Graph Copy
 
-OrgSeed is the new name of SF Graph Copy. On first launch it automatically copies your SF Graph Copy profiles, logs, downloaded metadata and settings. The "don't duplicate" history keeps working. Once you've checked everything is there, you can uninstall SF Graph Copy.
+OrgSeed is the new name of SF Graph Copy. Close SF Graph Copy before opening OrgSeed for the first time: on first launch, OrgSeed automatically copies your SF Graph Copy profiles, logs, downloaded metadata and settings. The "don't duplicate" history keeps working. Once you've checked everything is there, you can uninstall SF Graph Copy.
