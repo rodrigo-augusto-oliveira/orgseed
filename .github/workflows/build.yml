@@ -1,4 +1,4 @@
-name: Gerar instaladores
+name: Build installers
 
 on:
   workflow_dispatch:
@@ -47,10 +47,12 @@ jobs:
             dist/*.AppImage
             dist/*.deb
 
-      - name: Publicar na release (somente em tags v*)
+      - name: Publish to the release (v* tags only)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
+          name: OrgSeed ${{ github.ref_name }}
+          body_path: docs/INSTALL.md
           files: |
             dist/*.exe
             dist/*.dmg
