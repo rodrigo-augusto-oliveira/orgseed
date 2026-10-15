@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:" />
+  <title>SF Graph Copy</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <button id="btnHome" class="brand" title="Início">
+      <svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><path d="M8.2 7.8 10.6 15.6M15.8 7.8 13.4 15.6M9 6h6"/></svg>
+      <span>SF Graph Copy</span>
+    </button>
+    <span id="crumb" class="crumb" hidden></span>
+    <button id="sfPill" class="pill" title="Configurações do Salesforce CLI">verificando sf…</button>
+    <div class="spacer"></div>
+    <div id="dataTools" class="profile-bar" hidden>
+      <label for="profileSelect" class="muted">Perfil</label>
+      <select id="profileSelect"><option value="">— sem perfil —</option></select>
+      <button id="btnSaveProfile" class="btn">Salvar</button>
+      <div class="menu-wrap">
+        <button id="btnProfileMenu" class="btn icon" aria-haspopup="true" title="Mais opções">⋯</button>
+        <div id="profileMenu" class="menu" hidden>
+          <button data-act="saveAs">Salvar como…</button>
+          <button data-act="import">Importar config.json…</button>
+          <button data-act="export">Exportar config.json…</button>
+          <hr />
+          <button data-act="delete" class="danger">Excluir perfil</button>
+        </div>
+      </div>
+    </div>
+    <button id="btnSettings" class="btn icon" title="Configurações">⚙</button>
+  </header>
+
+  <main id="view-home" class="home">
+    <div class="home-inner">
+      <h1>O que você quer levar para outra org?</h1>
+      <p class="muted">As orgs conectadas pelo Salesforce CLI ficam disponíveis nas duas opções.</p>
+      <div class="home-cards">
+        <button class="home-card" data-go="data">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="8" width="16" height="10" rx="2"/><rect x="26" y="8" width="16" height="10" rx="2"/><rect x="16" y="30" width="16" height="10" rx="2"/><path d="M14 18v6h20v-6M24 24v6"/></svg>
+          <h3>Copiar dados</h3>
+          <p>Registros com pais e filhos — oportunidade, itens, tabela de preços — recriados no destino pela Composite Graph API.</p>
+          <span class="go">Abrir →</span>
+        </button>
+        <button class="home-card" data-go="meta">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 6 40 14v20L24 42 8 34V14z"/><path d="M8 14l16 8 16-8M24 22v20"/></svg>
+          <h3>Copiar metadados</h3>
+          <p>Objetos completos, somente campos ou outros componentes (Apex, Flows, Layouts…) baixados da origem e implantados no destino.</p>
+          <span class="go">Abrir →</span>
+        </button>
+      </div>
+      <div id="homeStatus" class="home-status"></div>
+    </div>
+  </main>
+
+  <main id="view-data" class="layout" hidden>
+    <section class="config">
+      <div class="config-scroll">
+
+        <div class="card">
+          <div class="card-head"><h2>Orgs</h2>
+            <div class="head-actions">
+              <button id="btnRefreshOrgs" class="btn ghost small js-refresh-orgs" title="Recarregar lista de orgs">↻ Recarregar</button>
+              <button id="btnAddOrg" class="btn ghost small js-add-org">+ Conectar org</button>
+            </div>
+          </div>
+          <div class="org-pair">
+            <div class="field">
+              <label for="srcOrg">Origem</label>
+              <select id="srcOrg"></select>
+              <div id="srcInfo" class="hint mono"></div>
+            </div>
+            <button id="btnSwap" class="btn icon swap" title="Inverter origem e destino">⇄</button>
+            <div class="field">
+              <label for="tgtOrg">Destino</label>
+              <select id="tgtOrg"></select>
+              <div id="tgtInfo" class="hint mono"></div>
+            </div>
+          </div>
+          <div id="orgWarn" class="alert" hidden></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h2>Registros raiz</h2></div>
+          <div class="field">
+            <label for="rootObject">Objeto</label>
+            <input id="rootObject" list="objectList" placeholder="Opportunity" spellcheck="false" autocomplete="off" />
+            <datalist id="objectList"></datalist>
+          </div>
+          <div class="segmented" role="tablist">
+            <button id="modeIds" class="seg active" role="tab">IDs</button>
+            <button id="modeWhere" class="seg" role="tab">Filtro SOQL</button>
+          </div>
+          <div id="idsBox" class="field">
+            <textarea id="rootIds" rows="3" class="mono" spellcheck="false" placeholder="006XXXXXXXXXXXXXXX, 006YYYYYYYYYYYYYYY&#10;(separados por vírgula, espaço ou linha)"></textarea>
+          </div>
+          <div id="whereBox" class="field" hidden>
+            <div class="soql-prefix mono">SELECT … FROM <span id="soqlObj">Opportunity</span> WHERE</div>
+            <textarea id="rootWhere" rows="3" class="mono" spellcheck="false" placeholder="StageName = 'Closed Won' AND CloseDate = LAST_N_DAYS:30"></textarea>
+            <div class="row">
+              <label for="rootLimit" class="muted">LIMIT</label>
+              <input id="rootLimit" type="number" min="1" value="20" class="narrow" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h2>Filhos a levar</h2><span id="childCount" class="muted"></span></div>
+          <input id="childFilter" type="search" placeholder="Filtrar relacionamentos…" />
+          <div id="childList" class="checklist"><div class="empty">Escolha a origem e o objeto raiz.</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h2>Objetos que podem ser criados</h2>
+            <button id="btnSuggest" class="btn ghost small" title="Adicionar raiz, filhos e pais obrigatórios">✦ Sugerir</button>
+          </div>
+          <div id="chips" class="chips"></div>
+          <input id="chipInput" list="objectList" placeholder="Adicionar objeto e Enter" spellcheck="false" autocomplete="off" />
+          <div class="row gap">
+            <label class="muted" for="maxDepth">Níveis de pais</label>
+            <input id="maxDepth" type="number" min="0" max="6" value="3" class="narrow" />
+            <label class="toggle"><input id="reuseExisting" type="checkbox" checked /> Reaproveitar existentes no destino</label>
+            <label class="toggle"><input id="skipAlreadyCopied" type="checkbox" checked /> Não duplicar o que já foi copiado antes</label>
+            <label class="toggle"><input id="updateExisting" type="checkbox" checked /> Atualizar com os dados da origem os registros que já existem</label>
+          </div>
+        </div>
+
+        <details class="card">
+          <summary><h2>Avançado</h2></summary>
+          <label class="toggle"><input id="autoExternalId" type="checkbox" checked /> Reconhecer registros pelo ID externo automaticamente</label>
+          <div class="field">
+            <label for="matchBy">Campos para achar existentes (matchBy)</label>
+            <textarea id="matchBy" rows="6" class="mono" spellcheck="false"></textarea>
+          </div>
+          <div class="field">
+            <label for="linkOnly">Objetos só para ligar (não cria; procura no destino)</label>
+            <textarea id="linkOnly" rows="3" class="mono" spellcheck="false" placeholder='{ "User": ["Email"], "Regional__c": ["Name"] }'></textarea>
+          </div>
+          <div class="field">
+            <label for="sourceIdField">Campo no destino que guarda o ID da origem (opcional)</label>
+            <textarea id="sourceIdField" rows="3" class="mono" spellcheck="false" placeholder='{ "Opportunity": "IdOrigem__c" }'></textarea>
+          </div>
+          <div class="field">
+            <label for="skipFields">Campos ignorados (skipFields) — "*" vale para todos</label>
+            <textarea id="skipFields" rows="4" class="mono" spellcheck="false"></textarea>
+          </div>
+          <div class="field">
+            <label for="extraChildren">Filhos de outros níveis (ex.: filhos dos filhos)</label>
+            <textarea id="extraChildren" rows="3" class="mono" spellcheck="false" placeholder='{ "OpportunityLineItem": ["OpportunityLineItemSchedules"] }'></textarea>
+          </div>
+          <div class="row gap">
+            <label class="muted" for="apiVersion">API</label>
+            <input id="apiVersion" value="61.0" class="narrow mono" />
+            <label class="muted" for="maxNodes">Máx. registros por graph</label>
+            <input id="maxNodes" type="number" min="1" max="500" value="500" class="narrow" />
+          </div>
+        </details>
+      </div>
+
+      <div class="actions">
+        <button id="btnDry" class="btn secondary">Simular</button>
+        <button id="btnRun" class="btn primary">Executar</button>
+        <button id="btnCancel" class="btn danger" hidden>Cancelar</button>
+      </div>
+    </section>
+
+    <section class="results">
+      <div id="emptyState" class="empty-state">
+        <svg viewBox="0 0 120 80" aria-hidden="true"><rect x="8" y="10" width="34" height="18" rx="4"/><rect x="78" y="10" width="34" height="18" rx="4"/><rect x="43" y="52" width="34" height="18" rx="4"/><path d="M25 28v12h35v12M95 28v12H60"/></svg>
+        <h3>Monte a cópia à esquerda</h3>
+        <p>Use <b>Simular</b> para ver exatamente o que seria criado no destino, sem gravar nada. Depois, <b>Executar</b> grava de verdade.</p>
+      </div>
+
+      <div id="runView" hidden>
+        <div class="run-head">
+          <div id="phase" class="phase"></div>
+          <button id="btnShowLog" class="btn ghost small" hidden>Abrir arquivo de log</button>
+        </div>
+        <div class="stats">
+          <div class="stat"><span id="stRoots">0</span><label>Raiz</label></div>
+          <div class="stat"><span id="stCollected">0</span><label>Coletados</label></div>
+          <div class="stat"><span id="stReused">0</span><label>Reaproveitados</label></div>
+          <div class="stat"><span id="stLinked">0</span><label>Ligados</label></div>
+          <div class="stat"><span id="stUpdated">0</span><label id="stUpdatedLabel">Atualizados</label></div>
+          <div class="stat good"><span id="stCreated">0</span><label id="stCreatedLabel">Criados</label></div>
+          <div class="stat bad"><span id="stFailed">0</span><label>Graphs com falha</label></div>
+        </div>
+        <div id="perObject" class="per-object"></div>
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-tab="graphs">Graphs <span id="tcGraphs" class="count"></span></button>
+          <button class="tab" data-tab="warnings">Avisos <span id="tcWarnings" class="count"></span></button>
+          <button class="tab" data-tab="log">Log</button>
+        </div>
+        <div id="tab-graphs" class="tab-body"></div>
+        <div id="tab-warnings" class="tab-body" hidden></div>
+        <div id="tab-log" class="tab-body log mono" hidden></div>
+      </div>
+    </section>
+  </main>
+
+  <main id="view-meta" class="layout" hidden>
+    <section class="config">
+      <div class="config-scroll" id="mdConfig">
+        <div class="card">
+          <div class="card-head"><h2>Orgs</h2>
+            <div class="head-actions">
+              <button class="btn ghost small js-refresh-orgs" title="Recarregar lista de orgs">↻ Recarregar</button>
+              <button class="btn ghost small js-add-org">+ Conectar org</button>
+            </div>
+          </div>
+          <div class="org-pair">
+            <div class="field">
+              <label for="mdSrcOrg">Origem</label>
+              <select id="mdSrcOrg"></select>
+              <div id="mdSrcInfo" class="hint mono"></div>
+            </div>
+            <button id="mdSwap" class="btn icon swap" title="Inverter origem e destino">⇄</button>
+            <div class="field">
+              <label for="mdTgtOrg">Destino</label>
+              <select id="mdTgtOrg"></select>
+              <div id="mdTgtInfo" class="hint mono"></div>
+            </div>
+          </div>
+          <div id="mdOrgWarn" class="alert" hidden></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h2>O que levar</h2>
+            <button id="mdRefresh" class="btn ghost small" title="Buscar de novo nas orgs">↻ Atualizar lista</button>
+          </div>
+          <div class="segmented" role="tablist">
+            <button class="seg active" data-md-mode="objects">Objetos completos</button>
+            <button class="seg" data-md-mode="fields">Somente campos</button>
+            <button class="seg" data-md-mode="types">Outros tipos</button>
+          </div>
+
+          <div id="mdPane-objects" class="md-pane">
+            <div class="row">
+              <input id="mdObjFilter" type="search" placeholder="Filtrar objetos…" class="grow" />
+              <label class="toggle"><input id="mdShowStd" type="checkbox" /> Mostrar padrão</label>
+            </div>
+            <div id="mdObjList" class="checklist tall"></div>
+          </div>
+
+          <div id="mdPane-fields" class="md-pane" hidden>
+            <div class="field">
+              <label for="mdFieldObject">Objeto</label>
+              <input id="mdFieldObject" list="mdObjDatalist" placeholder="Escolha o objeto (ex.: Account)" spellcheck="false" autocomplete="off" />
+            </div>
+            <div id="mdFieldNote" class="alert" hidden></div>
+            <div class="row">
+              <input id="mdFieldFilter" type="search" placeholder="Filtrar campos…" class="grow" />
+              <button id="mdFieldAll" class="btn ghost small">Marcar visíveis</button>
+            </div>
+            <div id="mdFieldList" class="checklist tall"></div>
+          </div>
+
+          <div id="mdPane-types" class="md-pane" hidden>
+            <div class="field">
+              <label for="mdType">Tipo de metadado</label>
+              <div class="input-wrap">
+                <input id="mdType" list="mdTypeDatalist" placeholder="ApexClass, Flow, Layout…" spellcheck="false" autocomplete="off" />
+                <span id="mdTypeSpin" class="spinner" hidden></span>
+              </div>
+            </div>
+            <div class="row">
+              <input id="mdCompFilter" type="search" placeholder="Filtrar componentes…" class="grow" />
+              <button id="mdCompAll" class="btn ghost small">Marcar visíveis</button>
+            </div>
+            <div id="mdCompList" class="checklist tall"></div>
+          </div>
+          <datalist id="mdObjDatalist"></datalist>
+          <datalist id="mdTypeDatalist"></datalist>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="mdBtnValidate" class="btn secondary">Validar</button>
+        <button id="mdBtnDeploy" class="btn primary">Implantar</button>
+      </div>
+    </section>
+
+    <section class="results">
+      <div class="card">
+        <div class="card-head"><h2>Pacote <span id="mdCount" class="count"></span></h2>
+          <button id="mdClear" class="btn ghost small">Limpar</button>
+        </div>
+        <div id="mdPkgWarn" class="alert bad" hidden></div>
+        <div id="mdPackage" class="package"></div>
+        <div class="row gap">
+          <label class="muted" for="mdTestLevel">Testes Apex</label>
+          <select id="mdTestLevel">
+            <option value="">Padrão do Salesforce</option>
+            <option value="NoTestRun">Não rodar testes (sandbox)</option>
+            <option value="RunLocalTests">Rodar testes locais</option>
+          </select>
+        </div>
+        <div class="hint wrap">Campos novos chegam no destino sem permissão de acesso (FLS). Libere por perfil ou permission set depois de implantar.</div>
+      </div>
+
+      <div id="mdResult" class="md-result" hidden>
+        <div class="run-head">
+          <div id="mdPhase" class="phase"></div>
+          <button id="mdOpenDir" class="btn ghost small" hidden>Abrir pasta dos arquivos</button>
+        </div>
+        <div id="mdResultBody"></div>
+        <details class="md-log"><summary class="muted">Log</summary><div id="mdLog" class="log mono"></div></details>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal genérico -->
+  <div id="modal" class="modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true">
+      <h3 id="modalTitle"></h3>
+      <div id="modalBody"></div>
+      <div class="modal-actions">
+        <button id="modalCancel" class="btn">Cancelar</button>
+        <button id="modalOk" class="btn primary">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toasts" class="toasts"></div>
+  <script src="renderer.js"></script>
+</body>
+</html>
