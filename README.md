@@ -1,63 +1,65 @@
-# SF Graph Copy
+# OrgSeed
 
-Ferramenta interna para copiar registros de uma org Salesforce para outra, levando junto os registros **pais** e **filhos** necessários, usando a **Composite Graph API**. Serve para popular sandboxes com a massa de dados vazia ou incompleta.
+Internal tool for seeding Salesforce sandboxes. It copies records from one org to another, bringing along the **parent** and **child** records they need (Composite Graph API), and it also copies metadata. Use it for sandboxes whose data is empty or incomplete.
 
-Tem interface (Windows, macOS e Linux) e linha de comando. A tela inicial oferece duas opções:
+It has a desktop app (Windows, macOS and Linux) and a command line. The home screen offers two options:
 
-- **Copiar dados** — registros com pais e filhos (Composite Graph API).
-- **Copiar metadados** — objetos completos, somente campos ou outros componentes (Metadata API, via Salesforce CLI).
+- **Copiar dados** (copy data) — records with their parents and children (Composite Graph API).
+- **Copiar metadados** (copy metadata) — whole objects, fields only, or other components (Metadata API, via Salesforce CLI).
+
+> Formerly **SF Graph Copy**. On first launch, OrgSeed copies the old app's profiles, logs and settings automatically.
+
+The app's interface is in Portuguese. In this guide, UI labels are written exactly as they appear on screen, with a translation where helpful.
 
 ---
 
-## 1. Requisitos
+## 1. Requirements
 
-- **Salesforce CLI (`sf`)** instalado em cada máquina. O login nas orgs é feito por ele.
+- **Salesforce CLI (`sf`)** installed on each machine. Logging in to the orgs is done through it.
   ```bash
   npm install -g @salesforce/cli
   sf --version
   ```
-- O usuário Salesforce precisa de **API Enabled**, leitura na origem e criação no destino dos objetos copiados.
+- The Salesforce user needs **API Enabled**, read access in the source org and create access in the target org for the copied objects.
 
-## 2. Instalar o app
+## 2. Install the app
 
-Baixe o instalador do sistema na aba **Actions** (ou **Releases**) do repositório.
+Download the installer for your system from the repository's **Releases** page. Step-by-step instructions for Windows, macOS and Linux, including the first-run security warnings, are in **[docs/INSTALL.md](docs/INSTALL.md)**.
 
-| Sistema | Arquivo | Primeira abertura |
-|---|---|---|
-| Windows | `SF-Graph-Copy-x.y.z-win-x64.exe` (instalador) ou `-portable.exe` | O SmartScreen avisa "aplicativo não reconhecido": clique em **Mais informações → Executar assim mesmo**. |
-| macOS | `SF-Graph-Copy-x.y.z-mac-arm64.dmg` (Apple Silicon) ou `-x64.dmg` (Intel) | Arraste para Aplicativos. Na primeira vez o macOS bloqueia: abra **Ajustes do Sistema → Privacidade e Segurança → Abrir Mesmo Assim**. Se aparecer "o app está danificado", rode `xattr -cr "/Applications/SF Graph Copy.app"` no Terminal. |
-| Linux | `.deb` (Ubuntu/Debian, recomendado) ou `.AppImage` | `.deb`: `sudo apt install ./SF-Graph-Copy-*.deb`. `.AppImage`: `chmod +x` e execute. |
+| System | File |
+|---|---|
+| Windows | `OrgSeed-x.y.z-win-x64.exe` (installer) or `OrgSeed-x.y.z-portable.exe` |
+| macOS | `OrgSeed-x.y.z-mac-arm64.dmg` (Apple Silicon) or `OrgSeed-x.y.z-mac-x64.dmg` (Intel) |
+| Linux | `OrgSeed-x.y.z-linux-amd64.deb` (Ubuntu/Debian, recommended) or `OrgSeed-x.y.z-linux-x86_64.AppImage` |
 
-O app não é assinado com certificado pago, por isso os avisos acima. Para uso interno, é normal.
+## 3. Using the app
 
-## 3. Usar a interface
+1. **Orgs** — click **+ Conectar org**, give it an alias and choose Sandbox, Production or a custom domain. The browser opens for login (this is `sf org login web`). Orgs already connected in `sf` appear automatically.
+2. Choose **Origem** (source) and **Destino** (target). The app warns you if the target doesn't look like a sandbox.
+3. **Registros raiz** (root records) — enter the object (e.g. `Opportunity`) and either:
+   - **IDs**: paste one or more IDs; or
+   - **Filtro SOQL**: just the WHERE clause, e.g. `StageName = 'Closed Won' AND CloseDate = LAST_N_DAYS:30`, with a LIMIT.
+4. **Filhos a levar** (children to bring) — select the relationships (e.g. `OpportunityLineItems`, `OpportunityContactRoles`).
+5. **Objetos que podem ser criados** (objects that may be created) — what the app is allowed to create in the target. **✦ Sugerir** (suggest) adds the root, the children and the required parents (e.g. PricebookEntry, Product2, Pricebook2), and puts fields with unique values or external IDs in the source (e.g. `CodigoSAP__c`) at the start of `matchBy`.
+6. Click **Simular** (dry run). Nothing is written: for each root record you see what would be created (root, parents, children) and what would be linked to records that already exist in the target.
+7. Click **Executar** (run). The app asks for confirmation, showing the target org, and then writes.
+8. In **Graphs**, each root record shows ✓ (created) or ✕ (failed, with the Salesforce error). **Avisos** (warnings) lists skipped fields. **Abrir arquivo de log** (open log file) shows the full JSON with payloads, responses and the source → target ID map.
 
-1. **Orgs** — clique em **+ Conectar org**, dê um apelido e escolha Sandbox, Produção ou domínio próprio. O navegador abre para o login (é o `sf org login web`). As orgs já conectadas no `sf` aparecem automaticamente.
-2. Escolha **Origem** e **Destino**. O app avisa se o destino não parece ser uma sandbox.
-3. **Registros raiz** — informe o objeto (ex.: `Opportunity`) e:
-   - **IDs**: cole um ou vários IDs; ou
-   - **Filtro SOQL**: só a cláusula WHERE, ex.: `StageName = 'Closed Won' AND CloseDate = LAST_N_DAYS:30`, com LIMIT.
-4. **Filhos a levar** — marque os relacionamentos (ex.: `OpportunityLineItems`, `OpportunityContactRoles`).
-5. **Objetos que podem ser criados** — o que o app pode criar no destino. **✦ Sugerir** adiciona a raiz, os filhos e os pais obrigatórios (ex.: PricebookEntry, Product2, Pricebook2), e põe no início do `matchBy` os campos com valor único ou ID externo da origem (ex.: `CodigoSAP__c`).
-6. Clique em **Simular**. Nada é gravado: você vê, para cada registro raiz, o que seria criado (raiz, pais, filhos) e o que seria ligado a registros que já existem no destino.
-7. Clique em **Executar**. O app pede confirmação mostrando a org destino e grava.
-8. Em **Graphs**, cada registro raiz mostra ✓ (criado) ou ✕ (falhou, com o erro do Salesforce). **Avisos** lista campos omitidos. **Abrir arquivo de log** mostra o JSON completo com payloads, respostas e o mapa de IDs origem → destino.
+**Perfil** (profile): save a configuration (e.g. "Opportunities with line items") and reuse it. You can import/export the same `config.json` used by the command line.
 
-**Perfis**: salve a configuração (ex.: "Oportunidades com itens") e reutilize. Dá para importar/exportar o mesmo `config.json` usado na linha de comando.
+## 3a. Reusing, linking and avoiding duplicates
 
-## 3a. Reaproveitar, ligar e não duplicar
+These options are on the data copy screen (some under **Avançado**, advanced).
 
-Estas opções ficam na tela de cópia de dados (algumas em **Avançado**).
+- **Não duplicar o que já foi copiado** (don't duplicate what was already copied; on by default). The app reads the logs of previous real runs between the same source and target. If the record still exists in the target, it is reused: it isn't created again, and any children not yet linked to it (e.g. added to the configuration after the copy) are created linked to it. If nothing is missing, the graph shows "Já copiado antes em dd/mm/aaaa" (already copied on …) and nothing is created. If the record was deleted in the target, it is created again. Dry runs are not part of this history.
+- **Atualizar com os dados da origem os registros que já existem** (update existing records with source data; on by default). When the app recognizes a record in the target (through the history, the external ID, `matchBy` or the source ID field), it updates that record with the source data instead of only linking it. Only changed fields are sent; if nothing changed, the record isn't touched (so no triggers or flows fire needlessly). Updates run before creation, separately: if one fails it becomes a warning and the opportunity is still created. Never updated: link-only objects (e.g. User), RecordType, and the standard Price Book with its price entries. Lookups pointing to records that don't exist in the target yet are left out of the update, with a warning. In the dry run, the total appears under "Seriam atualizados" (would be updated).
+- **Reconhecer registros pelo ID externo automaticamente** (match by external ID; Advanced, on by default). Every field marked as an external ID in the target that also exists in the source becomes the object's first matching rule, even without `matchBy`. This avoids `DUPLICATE_VALUE` on records such as transport zones, crops and price books.
+- **`DUPLICATE_VALUE` safety net**. If creation still fails because of a duplicate value in a unique field, the app takes the existing record's ID from the Salesforce error message, links and updates that record, and resends the graph once.
+- **Campo de ID de origem** (source ID field; Advanced, optional), e.g. `{ "Opportunity": "IdOrigem__c" }`. When creating a record, the app writes the source ID into this field. In later copies it finds the record by this field, even without the log. The field must exist and be writable in the target; if it doesn't exist, the app warns and ignores it.
+- **Objetos só para ligar** (link-only objects; Advanced), e.g. `{ "User": ["Email"], "Regional__c": ["Name"] }`. These objects are not copied, only linked: the app looks for the matching record in the target and points the lookup at it. If none is found, the field is omitted with a warning. An object can't be in both this list and "Objetos que podem ser criados". By default, User is linked by email; in sandboxes Salesforce appends `.invalid` to emails, and the app ignores that suffix when comparing. For User, if more than one has the same email, the active one wins.
+- **matchBy: new format**. Each object has a list of rules, tried in order. Each rule is a list of fields. The first rule that finds **exactly one** record in the target wins. If a rule finds more than one, it is skipped (with a warning) and the next one is tried; the app never just picks the first match. A field ending in `?` is optional: it's only used if it exists in both orgs. A required field missing in either org causes the rule to be skipped, with a warning. An empty value in the source matches nothing. The old format (`"Account": ["Name"]`) still works as a single rule. A plain string (`"Account": "Name"`) and mixed lists such as `[["CodigoSAP__c"], "Name"]` are also accepted, with each item being a rule.
 
-- **Não duplicar o que já foi copiado** (ligado por padrão). O app lê os logs das execuções reais anteriores entre a mesma origem e o mesmo destino. Se o registro ainda existe no destino, ele é reaproveitado: não é criado de novo, e os filhos que ainda não foram ligados a ele (ex.: incluídos na configuração depois da cópia) são criados ligados a ele. Se nada faltar, o graph aparece como "Já copiado antes em dd/mm/aaaa" sem criar nada. Se o registro foi apagado no destino, ele é criado de novo. Simulações não entram nesse histórico.
-- **Atualizar os registros que já existem** (ligado por padrão). Quando o app reconhece um registro no destino (pelo histórico, pelo ID externo, pelo `matchBy` ou pelo campo de ID de origem), ele atualiza esse registro com os dados da origem, em vez de só ligar. Só os campos que mudaram são enviados; se nada mudou, o registro não é tocado (não dispara trigger nem flow à toa). As atualizações vão antes da criação, separadas: se uma falhar, vira aviso e a oportunidade é criada assim mesmo. Nunca são atualizados: objetos só para ligar (ex.: User), RecordType e o Price Book padrão com as suas entradas de preço. Lookups que apontam para registros que ainda não existem no destino ficam fora da atualização, com aviso. Na simulação, o total aparece em "Seriam atualizados".
-- **Reconhecer pelo ID externo** (Avançado, ligado por padrão). Todo campo marcado como ID externo no destino, e que exista na origem, vira a primeira regra de reconhecimento do objeto, mesmo sem `matchBy`. Isso evita `DUPLICATE_VALUE` em cadastros como zona de transporte, cultura e tabela de preço.
-- **Rede de segurança para `DUPLICATE_VALUE`**. Se a criação ainda falhar por valor duplicado num campo único, o app pega o ID do registro existente na mensagem do Salesforce, liga e atualiza esse registro, e reenvia o graph uma única vez.
-- **Campo de ID de origem** (Avançado, opcional), ex.: `{ "Opportunity": "IdOrigem__c" }`. Ao criar um registro, o app grava nesse campo o ID da origem. Nas próximas cópias ele acha o registro por esse campo, mesmo sem o log. O campo precisa existir e ser gravável no destino; se não existir, o app avisa e ignora.
-- **Objetos só para ligar** (Avançado), ex.: `{ "User": ["Email"], "Regional__c": ["Name"] }`. São objetos que não são copiados, só ligados: o app procura o registro equivalente no destino e grava o lookup apontando para ele. Se não achar, o campo é omitido e aparece um aviso. Não pode estar também em "Objetos que podem ser criados". Por padrão, User é ligado por e-mail; no sandbox o Salesforce acrescenta `.invalid` ao e-mail, e o app ignora esse sufixo na comparação. Para User, se houver mais de um com o mesmo e-mail, vale o ativo.
-- **matchBy: formato novo**. Cada objeto tem uma lista de regras, tentadas na ordem. Cada regra é uma lista de campos. A primeira que achar **exatamente um** registro no destino vence. Se uma regra achar mais de um, ela é ignorada (com aviso) e a próxima é tentada; o app nunca escolhe o primeiro. Campo com `?` é opcional: só entra na regra se existir nas duas orgs. Campo obrigatório que não existe numa das orgs faz a regra ser ignorada, com aviso. Valor vazio na origem não casa com nada. O formato antigo (`"Account": ["Name"]`) continua valendo: é uma regra só. Texto solto (`"Account": "Name"`) e listas mistas como `[["CodigoSAP__c"], "Name"]` também são aceitas, com cada item sendo uma regra.
-
-Exemplo: procurar Account pelo código do SAP, depois pelo CNPJ e, por último, pelo nome.
+Example: find Account by SAP code, then by CNPJ (Brazilian company tax ID), and finally by name.
 
 ```json
 "matchBy": {
@@ -66,101 +68,102 @@ Exemplo: procurar Account pelo código do SAP, depois pelo CNPJ e, por último, 
 }
 ```
 
-## 3b. Copiar metadados
+## 3b. Copying metadata
 
-1. Na tela inicial, escolha **Copiar metadados** e selecione origem e destino.
-2. Em **O que levar**, escolha a aba:
-   - **Objetos completos** — o objeto com tudo que pertence a ele (campos, regras de validação, tipos de registro, list views…). Por padrão só aparecem objetos personalizados; marque **Mostrar padrão** para Account, Contact etc.
-   - **Somente campos** — escolha o objeto e marque os campos personalizados.
-   - **Outros tipos** — escolha o tipo (ApexClass, Flow, Layout, FlexiPage…) e marque os componentes.
-3. Nada é carregado antes da hora: cada lista só é buscada quando você abre a aba ou escolhe o objeto/tipo, com indicador de carregamento. **↻ Atualizar lista** busca de novo.
-4. Cada item mostra **novo** (não existe no destino) ou **existe no destino** (será sobrescrito). Componentes de pacote gerenciado aparecem desabilitados.
-5. O **Pacote** à direita junta tudo o que foi marcado. Se você levar campos de um objeto que não existe no destino, o app avisa.
-6. **Validar** baixa da origem e faz um deploy de verificação no destino, sem gravar nada. **Implantar** grava de verdade, depois de uma confirmação.
-7. A implantação é tudo ou nada: se um componente falhar, nada é alterado no destino. Os erros aparecem por componente, com a linha quando houver.
+1. On the home screen, choose **Copiar metadados** and select the source and target.
+2. Under **O que levar** (what to bring), pick a tab:
+   - **Objetos completos** (whole objects) — the object with everything that belongs to it (fields, validation rules, record types, list views…). By default only custom objects are listed; check **Mostrar padrão** (show standard) for Account, Contact, etc.
+   - **Somente campos** (fields only) — choose the object and select its custom fields.
+   - **Outros tipos** (other types) — choose the type (ApexClass, Flow, Layout, FlexiPage…) and select the components.
+3. Nothing loads ahead of time: each list is fetched only when you open the tab or choose the object/type, with a loading indicator. **↻ Atualizar lista** (refresh list) fetches it again.
+4. Each item shows **novo** (new — doesn't exist in the target) or **existe no destino** (exists in the target — will be overwritten). Managed package components are shown disabled.
+5. The **Pacote** (package) panel on the right collects everything you selected. If you bring fields of an object that doesn't exist in the target, the app warns you.
+6. **Validar** (validate) retrieves from the source and runs a check-only deploy in the target, without saving anything. **Implantar** (deploy) writes for real, after a confirmation.
+7. The deploy is all or nothing: if one component fails, nothing changes in the target. Errors are shown per component, with the line number when available.
 
-Observações:
-- Campos novos chegam sem permissão de acesso (FLS). Libere por perfil ou permission set depois.
-- Em produção, o Salesforce exige testes Apex quando o pacote tem código. Em sandbox, "Não rodar testes" acelera.
-- Tipos guardados em pastas (Report, Dashboard, EmailTemplate, Document) ainda não são suportados.
-- Os arquivos baixados e o resultado completo ficam salvos; use **Abrir pasta dos arquivos**.
+Notes:
+- New fields arrive without field-level security (FLS). Grant access through profiles or permission sets afterwards.
+- In production, Salesforce requires Apex tests when the package contains code. In sandboxes, "Não rodar testes" (don't run tests) is faster.
+- Folder-based types (Report, Dashboard, EmailTemplate, Document) are not supported yet.
+- The retrieved files and the full result are saved; use **Abrir pasta dos arquivos** (open files folder).
 
-## 4. Linha de comando
+## 4. Command line
 
 ```bash
-cp config.example.json config.json   # ajuste source, target e root
+cp config.example.json config.json   # set source, target and root
 node cli.js --config config.json --dry-run
 node cli.js --config config.json
 node cli.js --config config.json --ids 006A,006B
 node cli.js --config config.json --where "StageName = 'Closed Won'"
 ```
 
-## 5. Como a cópia funciona
+## 5. How the copy works
 
-1. Busca os registros raiz por IDs ou WHERE.
-2. Busca os filhos configurados em `children` (e filhos dos filhos, se configurados em "Filhos de outros níveis").
-3. Sobe pelos lookups/master-detail até `maxParentDepth` níveis, trazendo pais cujo objeto está em `copyObjects`.
-4. **Price Book padrão** nunca é criado: é ligado ao padrão do destino. Entradas de Price Book customizado levam junto a entrada padrão do mesmo produto.
-5. **RecordType** é ligado pelo DeveloperName.
-6. **matchBy** procura no destino registros que já existem (ex.: Produto pelo `ProductCode`) e os reaproveita em vez de duplicar. Regras de chave única e ambíguas: ver a seção 3a.
-7. Cada registro raiz vira um graph atômico: se um item falha, nada daquele graph é gravado. Se a árvore passa de "Máx. registros por graph" (até 500), o graph é dividido: primeiro o registro com os pais que faltam, depois os filhos em lotes sequenciais. Um lote que falha não impede os outros; ao reexecutar, o que já foi gravado é reaproveitado.
+1. Fetches the root records by IDs or WHERE clause.
+2. Fetches the children configured in `children` (and grandchildren, if configured under "Filhos de outros níveis", children of other levels).
+3. Walks up lookups/master-detail relationships up to `maxParentDepth` levels, bringing parents whose object is in `copyObjects`.
+4. The **standard Price Book** is never created: it is linked to the target's standard one. Custom Price Book entries bring along the standard entry for the same product.
+5. **RecordType** is linked by DeveloperName.
+6. **matchBy** looks for records that already exist in the target (e.g. Product by `ProductCode`) and reuses them instead of duplicating. Unique-key and ambiguous rules: see section 3a.
+7. Each root record becomes an atomic graph: if one item fails, nothing in that graph is written. If the tree exceeds "Máx. registros por graph" (max records per graph, up to 500), the graph is split: first the record with its missing parents, then the children in sequential batches. A failed batch doesn't stop the others; on a rerun, whatever was already written is reused.
 
-Só são enviados campos graváveis que existem nas duas orgs. `OwnerId` é ignorado por padrão (o dono vira o usuário logado no destino).
+Only writable fields that exist in both orgs are sent. `OwnerId` is skipped by default (the owner becomes the logged-in user in the target).
 
-**Diferenças de metadados entre as orgs** aparecem na aba **Avisos**, já na simulação:
-- campo com valor na origem que não existe ou não é gravável no destino → omitido (aviso amarelo);
-- valor que não existe numa picklist restrita do destino → **a gravação vai falhar** (aviso vermelho);
-- campo obrigatório no destino que ficou sem valor → **a gravação vai falhar** (aviso vermelho).
+**Metadata differences between the orgs** show up in the **Avisos** tab, already during the dry run:
+- a field with a value in the source that doesn't exist or isn't writable in the target → omitted (yellow warning);
+- a value that doesn't exist in a restricted picklist in the target → **the write will fail** (red warning);
+- a required field in the target left without a value → **the write will fail** (red warning).
 
-Se a simulação mostrar avisos vermelhos, a tela abre direto na aba Avisos. Corrija o metadado no destino (ou use `skipFields`) antes de executar.
+If the dry run shows red warnings, the screen opens directly on the Avisos tab. Fix the metadata in the target (or use `skipFields`) before running.
 
-## 6. Problemas comuns
+## 6. Troubleshooting
 
-| Sintoma | O que fazer |
+| Symptom | What to do |
 |---|---|
-| "sf não encontrado" | Instale o CLI. Se estiver num caminho fora do padrão, informe em ⚙ Configurações. |
-| Org "(não conectada)" | Refaça o login em **+ Conectar org** com o mesmo apelido. |
-| `REQUIRED_FIELD_MISSING` | O lookup obrigatório aponta para um objeto que não está em "Objetos que podem ser criados". Adicione-o. |
-| `FIELD_CUSTOM_VALIDATION_EXCEPTION` | Regra de validação, trigger ou flow do destino bloqueou. Ajuste os dados ou desative a regra temporariamente. |
-| `STANDARD_PRICE_NOT_DEFINED` | O produto não tem preço no Price Book padrão da origem. |
-| Registros duplicados | Ajuste o `matchBy` em Avançado. |
-| `DUPLICATE_VALUE` | O registro já existe no destino com o mesmo valor num campo único. Deixe ligado "Reconhecer registros pelo ID externo" ou crie uma regra no `matchBy` com esse campo. O app tenta de novo sozinho uma vez; se ainda falhar, veja o erro no log. |
-| Aviso "não atualizado — ..." | O registro existente foi ligado, mas o Salesforce recusou a atualização (validação, trigger ou permissão). A cópia segue; ajuste no destino se precisar. |
-| Aviso "casou com mais de um registro no destino" | Há duplicados no destino para essa chave, então a regra foi ignorada. Use um campo único (ex.: código) como primeira regra. |
-| Aviso "não existe na origem/destino (regra ignorada)" | Um campo do `matchBy` não existe numa das orgs. Corrija o nome ou marque o campo com `?` se for opcional. |
-| Aviso "não encontrado no destino por ... (campo omitido)" | Um objeto de "Objetos só para ligar" não tem registro equivalente no destino. Crie-o lá ou ajuste a chave. |
-| Linux: AppImage fecha ao abrir (Ubuntu 24.04) | Use o `.deb`, ou rode o AppImage com `--no-sandbox`. |
+| "sf não encontrado" (sf not found) | Install the CLI. If it's in a non-standard location, set it in ⚙ Configurações. |
+| Org "(não conectada)" (not connected) | Log in again with **+ Conectar org** using the same alias. |
+| `REQUIRED_FIELD_MISSING` | The required lookup points to an object that isn't in "Objetos que podem ser criados". Add it. |
+| `FIELD_CUSTOM_VALIDATION_EXCEPTION` | A validation rule, trigger or flow in the target blocked it. Adjust the data or temporarily disable the rule. |
+| `STANDARD_PRICE_NOT_DEFINED` | The product has no price in the source's standard Price Book. |
+| Duplicate records | Adjust `matchBy` under Avançado. |
+| `DUPLICATE_VALUE` | The record already exists in the target with the same value in a unique field. Keep "Reconhecer registros pelo ID externo automaticamente" on, or create a `matchBy` rule with that field. The app retries once on its own; if it still fails, check the error in the log. |
+| Warning "não atualizado — ..." (not updated) | The existing record was linked, but Salesforce rejected the update (validation, trigger or permission). The copy continues; fix it in the target if needed. |
+| Warning "casou com mais de um registro no destino" (matched more than one record in the target) | There are duplicates in the target for that key, so the rule was skipped. Use a unique field (e.g. a code) as the first rule. |
+| Warning "não existe na origem/destino (regra ignorada)" (doesn't exist in source/target, rule skipped) | A `matchBy` field doesn't exist in one of the orgs. Fix the name, or mark the field with `?` if it's optional. |
+| Warning "não encontrado no destino por ... (campo omitido)" (not found in target, field omitted) | A link-only object has no matching record in the target. Create it there or adjust the key. |
+| Linux: AppImage closes on launch (Ubuntu 24.04) | Use the `.deb`, or run the AppImage with `--no-sandbox`. |
 
-## 7. Desenvolvimento
+## 7. Development
 
 ```bash
 npm install
-npm start          # abre o app
-npm test           # testa os motores de dados e metadados com orgs simuladas
+npm start          # opens the app
+npm test           # tests the data and metadata engines against mocked orgs
 ```
 
-### Gerar instaladores
+### Building the installers
 
-**Pelo GitHub Actions (recomendado)** — o workflow `.github/workflows/build.yml` gera Windows, macOS e Linux de uma vez:
-- manualmente: aba **Actions → Gerar instaladores → Run workflow**; os arquivos ficam nos artifacts da execução;
-- por versão: `git tag v1.0.0 && git push --tags` cria uma Release com os instaladores.
+**With GitHub Actions (recommended)** — the `.github/workflows/build.yml` workflow builds Windows, macOS and Linux at once:
+- manually: **Actions → Build installers → Run workflow**; the files are attached to the run as artifacts;
+- per version: bump `version` in `package.json`, then `git tag v1.1.0 && git push --tags`. This creates a Release with the installers and `docs/INSTALL.md` as its description.
 
-**Localmente** — cada sistema gera o seu (o `.dmg` só pode ser gerado num Mac):
+**Locally** — each system builds its own (the `.dmg` can only be built on a Mac):
 ```bash
-npm run dist:win     # no Windows
-npm run dist:mac     # no macOS
-npm run dist:linux   # no Linux
+npm run dist:win     # on Windows
+npm run dist:mac     # on macOS
+npm run dist:linux   # on Linux
 ```
 
-### Estrutura
+### Project layout
 
 ```
-engine/engine.js     motor (coleta, ordenação, matchBy, Composite Graph)
-engine/metadata.js   cópia de metadados (listar, baixar e implantar)
-engine/sf-cli.js     integração com o Salesforce CLI
-cli.js               linha de comando
-app/main.js          processo principal do Electron
-app/preload.js       ponte segura entre a interface e o motor
-app/renderer/        interface (HTML, CSS, JS)
-test/                testes do motor com orgs simuladas
+engine/engine.js     engine (collection, ordering, matchBy, Composite Graph)
+engine/metadata.js   metadata copy (list, retrieve and deploy)
+engine/sf-cli.js     Salesforce CLI integration
+cli.js               command line
+app/main.js          Electron main process
+app/preload.js       secure bridge between the UI and the engine
+app/renderer/        UI (HTML, CSS, JS)
+test/                engine tests with mocked orgs
+docs/INSTALL.md      installation guide (also used as the release description)
 ```
