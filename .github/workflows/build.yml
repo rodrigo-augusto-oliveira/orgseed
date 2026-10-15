@@ -47,14 +47,21 @@ jobs:
             dist/*.AppImage
             dist/*.deb
 
-      - name: Publish to the release (v* tags only)
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+  # Publica uma única vez, depois dos três builds (evita três jobs criando a mesma release).
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
         with:
           name: OrgSeed ${{ github.ref_name }}
           body_path: docs/INSTALL.md
-          files: |
-            dist/*.exe
-            dist/*.dmg
-            dist/*.AppImage
-            dist/*.deb
+          files: dist/*
