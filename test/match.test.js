@@ -285,7 +285,8 @@ const warnKeys = (s) => Object.keys(s.warnings);
   }
 
   // ---- histórico antigo com dois registros de origem no mesmo registro do destino: só o primeiro é reaproveitado
-  {
+  // (logs com o nome atual e com o nome antigo do app, SF Graph Copy)
+  for (const prefix of ['orgseed', 'sf-graph-copy']) {
     const ACC = [...FIELDS.Account, str('Codigo__c')];
     const src = makeOrg('src', { Account: [
       { Id: id('Account', 1), Name: 'Acme Matriz', Codigo__c: 'C1', ParentId: null, OwnerId: null },
@@ -293,7 +294,7 @@ const warnKeys = (s) => Object.keys(s.warnings);
     ] }, { fields: { Account: ACC } });
     const tgt = makeOrg('tgt', { Account: [{ Id: id('Account', 'T1'), Name: 'Acme', Codigo__c: null }] }, { fields: { Account: ACC } });
     const logDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sfgc-hist2-'));
-    fs.writeFileSync(path.join(logDir, 'sf-graph-copy-2026-09-01T10-00-00-000Z.json'), JSON.stringify({
+    fs.writeFileSync(path.join(logDir, `${prefix}-2026-09-01T10-00-00-000Z.json`), JSON.stringify({
       source: 'src', target: 'tgt', dryRun: false, finishedAt: '2026-09-01T10:00:00.000Z',
       idMap: { [id('Account', 1)]: id('Account', 'T1'), [id('Account', 2)]: id('Account', 'T1') },
     }));

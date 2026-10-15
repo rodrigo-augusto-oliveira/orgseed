@@ -213,10 +213,11 @@ handle('logs:open', async () => { fs.mkdirSync(logsDir(), { recursive: true }); 
 
 // ---------------------------------------------------------------- ciclo de vida
 // Até a versão 1.0.0 o app se chamava "SF Graph Copy" e guardava os dados em outra pasta.
-// Copia (sem apagar a original) o que ainda não existir na pasta nova.
+// Copia uma única vez (sem apagar a original) o que ainda não existir na pasta nova.
 function migrateLegacyData() {
   const oldDir = path.join(app.getPath('appData'), 'SF Graph Copy');
-  if (oldDir === dataDir() || !fs.existsSync(oldDir)) return;
+  const marker = path.join(dataDir(), '.migrated-from-sf-graph-copy');
+  if (oldDir === dataDir() || !fs.existsSync(oldDir) || fs.existsSync(marker)) return;
   for (const item of ['perfis', 'logs', 'metadados', 'settings.json', 'Local Storage']) {
     const from = path.join(oldDir, item);
     const to = path.join(dataDir(), item);
@@ -224,6 +225,7 @@ function migrateLegacyData() {
       if (fs.existsSync(from) && !fs.existsSync(to)) fs.cpSync(from, to, { recursive: true });
     } catch (e) { console.error(`Não foi possível migrar ${item}:`, e.message); }
   }
+  try { fs.mkdirSync(dataDir(), { recursive: true }); fs.writeFileSync(marker, new Date().toISOString()); } catch { /* tenta de novo na próxima abertura */ }
 }
 
 app.whenReady().then(() => {
