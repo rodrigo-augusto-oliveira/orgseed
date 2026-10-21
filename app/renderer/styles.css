@@ -148,6 +148,17 @@ input.invalid, textarea.invalid { border-color: var(--bad); box-shadow: 0 0 0 3p
 .seg.active { background: var(--panel); color: var(--text); box-shadow: var(--shadow); font-weight: 550; }
 .soql-prefix { color: var(--muted); }
 .soql-prefix span { color: var(--accent); }
+.suggest-wrap { position: relative; display: flex; flex-direction: column; }
+.suggest {
+  position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 30; max-height: 220px; overflow: auto;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.14); padding: 4px;
+}
+.suggest .sug { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 5px 8px; border-radius: 6px; cursor: pointer; }
+.suggest .sug.active, .suggest .sug:hover { background: var(--accent-soft); }
+.suggest .nm { font-family: var(--mono); white-space: nowrap; }
+.suggest .sug.kw .nm { color: var(--muted); }
+.suggest .sug.rel .nm { color: var(--accent); }
+.suggest .dt { color: var(--muted); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .checklist { max-height: 210px; overflow: auto; border: 1px solid var(--line); border-radius: 7px; }
 .checklist .item { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; padding: 6px 9px; border-bottom: 1px solid var(--line); cursor: pointer; }

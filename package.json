@@ -9,7 +9,7 @@
   "author": "Equipe Salesforce",
   "scripts": {
     "start": "electron .",
-    "test": "node test/engine.test.js && node test/match.test.js && node test/update.test.js && node test/metadata.test.js && node test/auth.test.js",
+    "test": "node test/engine.test.js && node test/match.test.js && node test/update.test.js && node test/metadata.test.js && node test/auth.test.js && node test/soql-suggest.test.js",
     "cli": "node cli.js",
     "dist": "electron-builder --publish never",
     "dist:win": "electron-builder --win --publish never",

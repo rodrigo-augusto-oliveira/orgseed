@@ -98,7 +98,11 @@
           </div>
           <div id="whereBox" class="field" hidden>
             <div class="soql-prefix mono">SELECT … FROM <span id="soqlObj">Opportunity</span> WHERE</div>
-            <textarea id="rootWhere" rows="3" class="mono" spellcheck="false" placeholder="StageName = 'Closed Won' AND CloseDate = LAST_N_DAYS:30"></textarea>
+            <div class="suggest-wrap">
+              <textarea id="rootWhere" rows="3" class="mono" spellcheck="false" autocomplete="off" placeholder="StageName = 'Closed Won' AND CloseDate = LAST_N_DAYS:30"></textarea>
+              <div id="soqlSuggest" class="suggest" role="listbox" hidden></div>
+            </div>
+            <div class="hint wrap">Sugestões de campos, relacionamentos (Account.Name) e valores de picklist ao digitar. Ctrl+Espaço abre a lista; Tab ou Enter aceita.</div>
             <div class="row">
               <label for="rootLimit" class="muted">LIMIT</label>
               <input id="rootLimit" type="number" min="1" value="20" class="narrow" />
@@ -323,6 +327,7 @@
   </div>
 
   <div id="toasts" class="toasts"></div>
+  <script src="soql-suggest.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>
