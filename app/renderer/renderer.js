@@ -1,5 +1,5 @@
 'use strict';
-/* global api */
+/* global api, SoqlSuggest */
 
 // ---------------------------------------------------------------- utilitários
 const $ = (id) => document.getElementById(id);
@@ -91,6 +91,8 @@ const S = {
   orgs: [],
   mode: 'ids',
   rootDesc: null,
+  rootFields: null,
+  fieldCache: new Map(),
   selectedChildren: new Set(),
   copyObjects: [],
   objectsLoadedFor: null,
@@ -263,14 +265,112 @@ const loadRootDescribe = debounce(async () => {
   const src = $('srcOrg').value;
   const obj = $('rootObject').value.trim();
   $('soqlObj').textContent = obj || '…';
-  if (!src || !obj || !orgInfo(src)) { S.rootDesc = null; renderChildren(); return; }
+  if (!src || !obj || !orgInfo(src)) { S.rootDesc = null; S.rootFields = null; renderChildren(); return; }
   try {
     S.rootDesc = await api.describeObject(src, obj, apiV());
   } catch {
     S.rootDesc = { name: obj, children: [], error: `Objeto "${obj}" não encontrado na origem.` };
   }
+  S.rootFields = await loadFields(src, obj).catch(() => null);
   renderChildren();
 }, 350);
+
+// ---------------------------------------------------------------- sugestões do filtro SOQL
+const Sug = { items: [], index: 0, start: 0, end: 0, seq: 0, skipNext: false };
+
+async function loadFields(src, object) {
+  const key = `${src}|${object}`;
+  if (S.fieldCache.has(key)) return S.fieldCache.get(key);
+  const d = await api.describeRaw(src, object, apiV());
+  const fields = d.fields.map((f) => ({
+    name: f.name,
+    label: f.label,
+    type: f.type,
+    filterable: f.filterable,
+    relationshipName: f.relationshipName || null,
+    referenceTo: f.referenceTo || [],
+    picklist: f.type === 'picklist' || f.type === 'multipicklist'
+      ? (f.picklistValues || []).filter((p) => p.active).map((p) => ({ value: p.value, label: p.label }))
+      : [],
+  }));
+  S.fieldCache.set(key, fields);
+  return fields;
+}
+
+function hideSuggest() {
+  Sug.seq++;
+  Sug.items = [];
+  $('soqlSuggest').hidden = true;
+}
+
+function drawSuggest() {
+  const box = $('soqlSuggest');
+  box.replaceChildren(...Sug.items.map((it, i) => el('div', {
+    class: `sug ${it.kind}${i === Sug.index ? ' active' : ''}`,
+    role: 'option',
+    onmousedown: (e) => { e.preventDefault(); acceptSuggest(i); },
+  }, el('span', { class: 'nm', text: it.name }), el('span', { class: 'dt', text: it.detail }))));
+  box.hidden = !Sug.items.length;
+  const active = box.children[Sug.index];
+  if (active) active.scrollIntoView({ block: 'nearest' });
+}
+
+async function refreshSuggest(force = false) {
+  const box = $('rootWhere');
+  const src = $('srcOrg').value;
+  const seq = ++Sug.seq;
+  if (!S.rootFields || !src || document.activeElement !== box) return hideSuggest();
+  const text = box.value;
+  const caret = box.selectionStart;
+  const ctx = { fields: S.rootFields, force, fieldsOf: (o) => S.fieldCache.get(`${src}|${o}`) || null };
+  let r = SoqlSuggest.suggest(text, caret, ctx);
+  if (r.need) {
+    try { await loadFields(src, r.need); } catch { return hideSuggest(); }
+    if (seq !== Sug.seq || box.value !== text || box.selectionStart !== caret) return;
+    r = SoqlSuggest.suggest(text, caret, ctx);
+  }
+  Sug.items = r.items;
+  Sug.index = 0;
+  Sug.start = r.start;
+  Sug.end = r.end;
+  drawSuggest();
+}
+
+function acceptSuggest(i) {
+  const it = Sug.items[i];
+  if (!it) return;
+  const box = $('rootWhere');
+  const caret = Sug.start + it.insert.length;
+  box.value = box.value.slice(0, Sug.start) + it.insert + box.value.slice(Sug.end);
+  box.setSelectionRange(caret, caret);
+  hideSuggest();
+  Sug.skipNext = true;
+  box.dispatchEvent(new Event('input', { bubbles: true }));
+  // Depois de "Account." já mostra os campos da conta
+  if (it.kind === 'rel') refreshSuggest();
+}
+
+function bindSuggest() {
+  const box = $('rootWhere');
+  box.addEventListener('input', () => { if (Sug.skipNext) Sug.skipNext = false; else refreshSuggest(); });
+  box.addEventListener('blur', hideSuggest);
+  box.addEventListener('keydown', (e) => {
+    const open = !$('soqlSuggest').hidden && Sug.items.length;
+    if (e.ctrlKey && e.code === 'Space') { e.preventDefault(); refreshSuggest(true); return; }
+    if (!open) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      Sug.index = (Sug.index + (e.key === 'ArrowDown' ? 1 : -1) + Sug.items.length) % Sug.items.length;
+      drawSuggest();
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault();
+      acceptSuggest(Sug.index);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      hideSuggest();
+    }
+  });
+}
 
 function renderChildren() {
   const list = $('childList');
@@ -705,6 +805,7 @@ function bind() {
   document.querySelectorAll('.js-refresh-orgs').forEach((b) => b.addEventListener('click', async () => {
     await api.refreshSchema();
     S.objectsLoadedFor = null;
+    S.fieldCache.clear();
     mdResetCaches();
     loadOrgs();
   }));
@@ -725,6 +826,7 @@ function bind() {
   $('rootObject').addEventListener('change', () => { S.selectedChildren.clear(); renderChildren(); persist(); });
   $('modeIds').addEventListener('click', () => setMode('ids'));
   $('modeWhere').addEventListener('click', () => setMode('where'));
+  bindSuggest();
   $('childFilter').addEventListener('input', renderChildren);
 
   $('chipInput').addEventListener('keydown', (e) => {
